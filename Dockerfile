@@ -1,8 +1,24 @@
-FROM golang:1.8 as build
-WORKDIR /go/src/hello-world
-COPY hello-world.go .
-RUN go build -o hello-world .
+FROM golang:1.15 as builder
 
-FROM alpine:latest
-COPY --from=build /go/src/hello-world/hello-world /bin
-CMD hello-world
+RUN mkdir -p /app
+WORKDIR /app
+
+COPY go.mod go.mod
+
+ENV GOPROXY https://proxy.golang.org,direct
+
+RUN go mod download
+
+COPY main.go .
+
+ENV CGO_ENABLED=0
+
+RUN GOOS=linux go build ./main.go
+
+FROM scratch
+
+WORKDIR /app
+
+COPY --from=builder /app/main .
+
+CMD [ "/app/main" ]
